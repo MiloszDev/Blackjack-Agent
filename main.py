@@ -20,10 +20,10 @@ class BlackjackAgent:
                               state: tuple) -> np.array:
         """Epsilon-Greedy policy based on Q values."""
         num_actions = self.env.action_space.n
-        A = np.ones(num_actions) * self.epsilon / num_actions
+        action_probs = np.ones(num_actions) * self.epsilon / num_actions
         best_action = np.argmax(self.Q.get(state, np.zeros(num_actions)))
-        A[best_action] += (1.0 - self.epsilon)
-        return A
+        action_probs[best_action] += (1.0 - self.epsilon)
+        return action_probs
 
     def play_episode(self) -> list:
         """Play a single episode of Blackjack and update Q-values."""
@@ -62,7 +62,9 @@ class BlackjackAgent:
 
     def train(self) -> None:
         """Train the agent over a specified number of episodes."""
-        for _ in range(self.num_episodes):
+        for episode_num in range(self.num_episodes):
+            if episode_num > self.num_episodes * 0.8:
+                self.epsilon = 0.01
             episode = self.play_episode()
             self.update_Q_values(episode)
 
@@ -78,17 +80,17 @@ class BlackjackAgent:
         """Makes custom predictions based on what the model have learned.
         
         Args:
-            state: Is a tuple of state in the game -> (player_sum: int, dealer_card: int, usable_ace: bool)
+            state: A tuple representing the state in the game -> (player_sum: int, dealer_card: int, usable_ace: bool)
+        
+        Returns:
+            int: The index of the action to take based on the learned policy. (0 - Hit, 1 - Stand)
         """
 
-        self.epsilon_greedy_policy()
+        q_values = [self.Q.get((state, action), 0) for action in range(self.env.action_space.n)]
+
+        action = np.argmax(q_values)
+        return action
 
     def close(self) -> None:
         """Close the environment."""
         self.env.close()
-
-if __name__ == "__main__":
-    agent = BlackjackAgent(num_episodes=5, gamma=1.0, epsilon=0.1)
-    agent.train()
-    policy = agent.get_policy()
-    agent.close()
