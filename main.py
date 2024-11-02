@@ -10,9 +10,9 @@ class BlackjackAgent:
         self.env = gym.make("Blackjack-v1")
         self.num_episodes = num_episodes
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.epsilon = epsilon # chance of random action being selected instead of action that is in Q. That helps with a bit more exploration
         
-        self.Q = {}
+        self.Q = {} # Representation of agent knowledge
         self.returns_sum = {}
         self.returns_count = {}
 
@@ -29,11 +29,10 @@ class BlackjackAgent:
         """Play a single episode of Blackjack and update Q-values."""
         episode = []
         state, _ = self.env.reset()
-        print(state)
         
         for _ in range(100):
             probs = self.epsilon_greedy_policy(state)
-            action = np.random.choice(np.arange(len(probs)), p=probs)
+            action = np.random.choice(np.arange(len(probs)), p=probs) # exploration or exploitation
             next_state, reward, terminated, truncated, _ = self.env.step(action)
             episode.append((state, action, reward))
             
@@ -48,15 +47,17 @@ class BlackjackAgent:
                         episode: int = 10000) -> None:
         """Update Q values based on the returns from an episode."""
         G = 0
-        for state, action, reward in reversed(episode):
+
+        for state, action, reward in reversed(episode): # we want our agent not to only look at the present action but look at the past actions
             G = self.gamma * G + reward
-            
+
             if (state, action) not in self.returns_sum:
                 self.returns_sum[(state, action)] = 0.0
                 self.returns_count[(state, action)] = 0.0
             
             self.returns_sum[(state, action)] += G
             self.returns_count[(state, action)] += 1.0
+
             self.Q[(state, action)] = self.returns_sum[(state, action)] / self.returns_count[(state, action)]
 
     def train(self) -> None:
@@ -72,15 +73,22 @@ class BlackjackAgent:
             for state in self.Q
         }
         return policy
+    
+    def make_predictions(self, state: tuple) -> int:
+        """Makes custom predictions based on what the model have learned.
+        
+        Args:
+            state: Is a tuple of state in the game -> (player_sum: int, dealer_card: int, usable_ace: bool)
+        """
+
+        self.epsilon_greedy_policy()
 
     def close(self) -> None:
         """Close the environment."""
         self.env.close()
 
-
 if __name__ == "__main__":
-    agent = BlackjackAgent(num_episodes=10000, gamma=1.0, epsilon=0.1)
+    agent = BlackjackAgent(num_episodes=5, gamma=1.0, epsilon=0.1)
     agent.train()
     policy = agent.get_policy()
-    print(policy)
     agent.close()
